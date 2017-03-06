@@ -5,3 +5,10 @@ cec.admin:
     _title: 'Cloudfront Edge Caching'
   requirements:
     _permission: 'administer cec'
+cec.admin_invalidate_url:
+  path: 'admin/config/services/cec/invalidate-url'
+  defaults:
+    _form: '\Drupal\cloudfront_edge_caching\Form\CecAdminSettingsForm'
+    _title: 'Invalidate URL'
+  requirements:
+    _permission: 'administer cec'
