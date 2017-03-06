@@ -44,8 +44,13 @@ class CecAdminSettingsForm extends ConfigFormBase {
 
     $config = $this->config('cec.settings');
 
+    $form['settings'] = array(
+      '#type' => 'fieldset',
+      '#title' => $this->t('Settings'),
+    );
+
     // Region.
-    $form['cec_region'] = [
+    $form['settings']['cec_region'] = [
       '#type' => 'textfield',
       '#title' => t('Region'),
       '#default_value' => $config->get('cec_region'),
@@ -55,7 +60,7 @@ class CecAdminSettingsForm extends ConfigFormBase {
     ];
 
     // Key.
-    $form['cec_key'] = [
+    $form['settings']['cec_key'] = [
       '#type' => 'textfield',
       '#title' => t('Key'),
       '#default_value' => $config->get('cec_key'),
@@ -65,7 +70,7 @@ class CecAdminSettingsForm extends ConfigFormBase {
     ];
 
     // Secret.
-    $form['cec_secret'] = [
+    $form['settings']['cec_secret'] = [
       '#type' => 'textfield',
       '#title' => t('Secret'),
       '#default_value' => $config->get('cec_secret'),
@@ -75,13 +80,32 @@ class CecAdminSettingsForm extends ConfigFormBase {
     ];
 
     // Distribution ID.
-    $form['cec_distribution_id'] = [
+    $form['settings']['cec_distribution_id'] = [
       '#type' => 'textfield',
       '#title' => t('Distribution ID'),
       '#default_value' => $config->get('cec_distribution_id'),
       '#size' => 20,
       '#maxlength' => 128,
       '#description' => $this->t('Ej: E206SWIPUZ2Z48'),
+    ];
+
+    $form['cache'] = array(
+      '#type' => 'fieldset',
+      '#title' => $this->t('Cache configuration'),
+    );
+
+    // Auto clear cache for content
+    $form['cache']['cec_auto_cache_clear_content'] = [
+      '#type' => 'checkboxes',
+      '#options' => ['cec_auto_cache' => t('Clear cache when create/update/delete content')],
+      '#default_value' => $config->get('cec_auto_cache_clear_content'),
+    ];
+
+    // Auto clear cache for users
+    $form['cache']['cec_auto_cache_clear_users'] = [
+      '#type' => 'checkboxes',
+      '#options' => ['cec_auto_cache' => t('Clear cache when create/update/delete users')],
+      '#default_value' => $config->get('cec_auto_cache_clear_users'),
     ];
 
     $form['actions']['submit'] = array(
@@ -112,6 +136,8 @@ class CecAdminSettingsForm extends ConfigFormBase {
       ->set('cec_key', $form_state->getValue('cec_key'))
       ->set('cec_secret', $form_state->getValue('cec_secret'))
       ->set('cec_distribution_id', $form_state->getValue('cec_distribution_id'))
+      ->set('cec_auto_cache_clear_content', $form_state->getValue('cec_auto_cache_clear_content'))
+      ->set('cec_auto_cache_clear_users', $form_state->getValue('cec_auto_cache_clear_users'))
       ->save();
     parent::submitForm($form, $form_state);
   }
