@@ -1,0 +1,7 @@
+cec.admin:
+  path: 'admin/config/services/cec'
+  defaults:
+    _form: '\Drupal\cloudfront_edge_caching\Form\CecAdminSettingsForm'
+    _title: 'Cloudfront Edge Caching'
+  requirements:
+    _permission: 'administer cec'
