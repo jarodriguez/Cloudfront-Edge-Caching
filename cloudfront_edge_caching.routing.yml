@@ -8,7 +8,7 @@ cec.admin:
 cec.admin_invalidate_url:
   path: 'admin/config/services/cec/invalidate-url'
   defaults:
-    _form: '\Drupal\cloudfront_edge_caching\Form\CecAdminSettingsForm'
+    _form: '\Drupal\cloudfront_edge_caching\Form\CecAdminInvalidateUrl'
     _title: 'Invalidate URL'
   requirements:
     _permission: 'administer cec'
