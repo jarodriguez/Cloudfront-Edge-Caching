@@ -4,6 +4,8 @@ namespace Drupal\cloudfront_edge_caching\Form;
 
 use Drupal\Core\Form\ConfigFormBase;
 use Drupal\Core\Form\FormStateInterface;
+use Aws;
+use Aws\Exception\AwsException;
 
 /**
  * Configure settings for Cloudfront credentials
@@ -62,7 +64,7 @@ class CecAdminSettingsForm extends ConfigFormBase {
     // Key.
     $form['settings']['cec_key'] = [
       '#type' => 'textfield',
-      '#title' => t('Key'),
+      '#title' => t('Access Key Id'),
       '#default_value' => $config->get('cec_key'),
       '#size' => 50,
       '#maxlength' => 128,
@@ -72,7 +74,7 @@ class CecAdminSettingsForm extends ConfigFormBase {
     // Secret.
     $form['settings']['cec_secret'] = [
       '#type' => 'textfield',
-      '#title' => t('Secret'),
+      '#title' => t('Secret Access Key'),
       '#default_value' => $config->get('cec_secret'),
       '#size' => 20,
       '#maxlength' => 128,
@@ -118,6 +120,33 @@ class CecAdminSettingsForm extends ConfigFormBase {
   }
 
   public function validateForm(array &$form, FormStateInterface $form_state) {
+
+    // Get data
+    $data = $form_state->getValues();
+
+    // Load AWS SDK
+    $cloudFront = new  Aws\CloudFront\CloudFrontClient([
+      'version' => 'latest',
+      'region' => $data['cec_region'],
+      'credentials' => [
+        'key' => $data['cec_key'],
+        'secret' => $data['cec_secret']
+      ]
+    ]);
+
+    // Try a connection test
+    try {
+      $list_distributions = $cloudFront->listDistributions();
+    } catch (AwsException $e) {
+      switch($e->getStatusCode()) {
+        case '403':
+          $form_state->setErrorByName('cec_key', $this->t('The credentials are incorrect.'));
+          $form_state->setErrorByName('cec_secret', $this->t('The credentials are incorrect.'));
+          break;
+        default:
+          $form_state->setErrorByName('', $this->t($e->getMessage()));
+      }
+    }
   }
 
   /**
@@ -139,6 +168,9 @@ class CecAdminSettingsForm extends ConfigFormBase {
       ->set('cec_auto_cache_clear_content', $form_state->getValue('cec_auto_cache_clear_content'))
       ->set('cec_auto_cache_clear_users', $form_state->getValue('cec_auto_cache_clear_users'))
       ->save();
+
+    $config = $this->config('cec.settings');
+
     parent::submitForm($form, $form_state);
   }
 }
