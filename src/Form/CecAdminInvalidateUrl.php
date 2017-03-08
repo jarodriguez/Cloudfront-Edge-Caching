@@ -55,13 +55,13 @@ class CecAdminInvalidateUrl extends ConfigFormBase {
       '#required' => TRUE
     ];
 
-    $form['actions']['submit'] = array(
+    $form['invalidate'] = array(
       '#type' => 'submit',
-      '#value' => $this->t('Invalidate'),
-      '#button_type' => 'primary',
+      '#value' => $this->t('Invalidate URL'),
+      '#submit' => array('::invalidateSubmission'),
     );
 
-    return parent::buildForm($form, $form_state);
+    return $form;
   }
 
   public function validateForm(array &$form, FormStateInterface $form_state) {
@@ -83,15 +83,14 @@ class CecAdminInvalidateUrl extends ConfigFormBase {
   }
 
   /**
-   * Form submission handler.
+   * Custom submission handler.
    *
    * @param array $form
-   * An associative array containing the structure of the form.
+   *   An associative array containing the structure of the form.
    * @param \Drupal\Core\Form\FormStateInterface $form_state
-   * The current state of the form.
+   *   The current state of the form.
    */
-  public function submitForm(array &$form, FormStateInterface $form_state) {
-
+  public function invalidateSubmission(array &$form, FormStateInterface $form_state) {
     // Get the URL
     $url_value = explode("\n", $form_state->getValue('url'));
 
@@ -106,35 +105,15 @@ class CecAdminInvalidateUrl extends ConfigFormBase {
       }
     }
 
-    // Quantity
-    $total_paths = count($paths);
-
-    // Load AWS SDK
-    $cloudFront = new  Aws\CloudFront\CloudFrontClient([
-      'version'     => 'latest',
-      'region'      => $config->get('cec_region'),
-      'credentials' => [
-        'key'    => $config->get('cec_key'),
-        'secret' => $config->get('cec_secret')
-      ]
-    ]);
-
     // Invalidate URL
-    try {
-      $result = $cloudFront->createInvalidation([
-        'DistributionId' => $config->get('cec_distribution_id'), // REQUIRED
-        'InvalidationBatch' => [ // REQUIRED
-          'CallerReference' => random_int(1, 999999999999999999),
-          'Paths' => [
-            'Items' => $paths, // items or paths to invalidate
-            'Quantity' => $total_paths // REQUIRED (must be equal to the number of 'Items' in the previus line)
-          ]
-        ]
-      ]);
-    } catch (AwsException $e) {
-      drupal_set_message(t($e->getMessage()), 'error');
-    }
+    list($status, $message) = cloudfront_edge_caching_invalidate_url($paths);
 
-    parent::submitForm($form, $form_state);
+    if ($status == TRUE) {
+      drupal_set_message(t('You invalidation is in progress.'), 'status');
+    }
+    else {
+      drupal_set_message(t($message), 'error');
+    }
   }
+
 }

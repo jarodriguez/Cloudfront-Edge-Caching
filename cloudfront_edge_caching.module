@@ -1,3 +1,126 @@
 <?php
 
-//require_once __DIR__ . '/vendor/aws/aws-sdk-php/';
+use Drupal\Core\Url;
+use Aws;
+use Aws\Exception\AwsException;
+
+/**
+ * @file
+ * Attaches custom data fields to Drupal entities.
+ */
+
+/**
+ * Implements hook_entity_update().
+ */
+function cloudfront_edge_caching_entity_update(Drupal\Core\Entity\EntityInterface $entity) {
+
+  // Get settings
+  $config = \Drupal::config('cec.settings');
+
+  $enable_auto_clear_cache = $config->get('cec_auto_cache_clear_content');
+  if ($enable_auto_clear_cache['cec_auto_cache']) {
+    // Only clear URL in nodes
+    $entity_type = $entity->getEntityTypeId();
+
+    if ($entity_type == 'node') {
+      $path_url = \Drupal::service('path.alias_manager')->getAliasByPath('/node/' . $entity->id());
+
+      // Test connection
+      $test_connection_cec = cloudfront_edge_caching_test_connection($config->get('cec_region'), $config->get('cec_key'), $config->get('cec_secret'));
+      if ($test_connection_cec == TRUE) {
+        // Invalidate URL
+        list($status, $message) = cloudfront_edge_caching_invalidate_url(array($path_url));
+        if ($status != TRUE) {
+          drupal_set_message(t($message), 'error');
+        }
+      }
+    }
+  }
+}
+
+/**
+ * @return mixed
+ */
+function cloudfront_edge_caching_test_connection($cec_region, $cec_key, $cec_secret) {
+
+  // Return values
+  $return[0] = FALSE;
+  $return[1] = 'status';
+  $return[2] = 'message';
+
+  if (!empty($cec_region) && !empty($cec_key) && !empty($cec_secret)) {
+    // Load AWS SDK
+    $cloudFront = new  Aws\CloudFront\CloudFrontClient([
+      'version' => 'latest',
+      'region' => $cec_region,
+      'credentials' => [
+        'key' => $cec_key,
+        'secret' => $cec_secret
+      ]
+    ]);
+
+    // Try a connection test
+    try {
+      $list_distributions = $cloudFront->listDistributions();
+    } catch (AwsException $e) {
+      $catch = TRUE;
+      $return[1] = $e->getStatusCode();
+      $return[2] = $e->getMessage();
+    }
+
+    if (empty($catch)) {
+      $return[0] = TRUE;
+    }
+  }
+  else {
+    $return[2] = 'Parameters not received correctly';
+  }
+
+  return $return;
+}
+
+function cloudfront_edge_caching_invalidate_url($paths) {
+
+  //Return values
+  $return[0] = FALSE;
+  $return[1] = 'message';
+
+  // Get the AWS Credentials
+  $config = \Drupal::config('cec.settings');
+
+  // Quantity
+  $total_paths = count($paths);
+
+  // Load AWS SDK
+  $cloudFront = new  Aws\CloudFront\CloudFrontClient([
+    'version'     => 'latest',
+    'region'      => $config->get('cec_region'),
+    'credentials' => [
+      'key'    => $config->get('cec_key'),
+      'secret' => $config->get('cec_secret')
+    ]
+  ]);
+
+  // Invalidate URL
+  try {
+    $result = $cloudFront->createInvalidation([
+      'DistributionId' => $config->get('cec_distribution_id'), // REQUIRED
+      'InvalidationBatch' => [ // REQUIRED
+        'CallerReference' => random_int(1, 999999999999999999),
+        'Paths' => [
+          'Items' => $paths, // items or paths to invalidate
+          'Quantity' => $total_paths // REQUIRED (must be equal to the number of 'Items' in the previus line)
+        ]
+      ]
+    ]);
+  } catch (AwsException $e) {
+    $catch = TRUE;
+    $return[1] = $e->getMessage();
+  }
+
+  if (empty($catch)) {
+    $return[0] = TRUE;
+  }
+
+  return $return;
+}

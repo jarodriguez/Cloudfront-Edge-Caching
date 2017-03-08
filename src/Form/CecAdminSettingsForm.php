@@ -124,27 +124,17 @@ class CecAdminSettingsForm extends ConfigFormBase {
     // Get data
     $data = $form_state->getValues();
 
-    // Load AWS SDK
-    $cloudFront = new  Aws\CloudFront\CloudFrontClient([
-      'version' => 'latest',
-      'region' => $data['cec_region'],
-      'credentials' => [
-        'key' => $data['cec_key'],
-        'secret' => $data['cec_secret']
-      ]
-    ]);
+    // Test connection
+    $test_connection_cec = cloudfront_edge_caching_test_connection($data['cec_region'], $data['cec_key'], $data['cec_secret']);
 
-    // Try a connection test
-    try {
-      $list_distributions = $cloudFront->listDistributions();
-    } catch (AwsException $e) {
-      switch($e->getStatusCode()) {
+    if ($test_connection_cec[0] == FALSE) {
+      switch($test_connection_cec[1]) {
         case '403':
           $form_state->setErrorByName('cec_key', $this->t('The credentials are incorrect.'));
           $form_state->setErrorByName('cec_secret', $this->t('The credentials are incorrect.'));
           break;
         default:
-          $form_state->setErrorByName('', $this->t($e->getMessage()));
+          $form_state->setErrorByName('', $this->t($test_connection_cec[2]));
       }
     }
   }
