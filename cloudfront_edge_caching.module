@@ -1,12 +1,28 @@
 <?php
 
-use Drupal\Core\Url;
-use Aws\Exception\AwsException;
-
 /**
  * @file
- * Attaches custom data fields to Drupal entities.
+ * This module enables integration with Amazon Cloudfront functionality.
+ *
+ * Administrators can add the credentials in order to clear cache when
+ * content and users are updated, also it's possible invalidate specific URL
  */
+
+use Aws\Exception\AwsException;
+use Drupal\Core\Routing\RouteMatchInterface;
+
+/**
+ * Implements hook_help().
+ */
+function cloudfront_edge_caching_help($route_name, RouteMatchInterface $route_match) {
+  switch ($route_name) {
+    case 'help.page.cloudfront_edge_caching':
+      $output = '<h3>' . t('About') . '</h3>';
+      $output .= '<p>' . t('Cloudfront Edge Caching module allow to clear cache pages when the content is modified, also allow to invalidate specific URL through an interface.') . '</p>';
+      $output .= '<p>' . t('Cloudfront Edge Caching is a trademark of Emergya S.L..') . '</p>';
+      return ['#markup' => $output];
+  }
+}
 
 /**
  * Implements hook_entity_update().
@@ -16,12 +32,14 @@ function cloudfront_edge_caching_entity_update(Drupal\Core\Entity\EntityInterfac
   // Get settings
   $config = \Drupal::config('cec.settings');
 
-  $enable_auto_clear_cache = $config->get('cec_auto_cache_clear_content');
-  if ($enable_auto_clear_cache['cec_auto_cache']) {
+  $enable_auto_clear_cache_content = $config->get('cec_auto_cache_clear_content');
+  $enable_auto_clear_cache_users = $config->get('cec_auto_cache_clear_users');
+
+  if ($enable_auto_clear_cache_content['cec_auto_cache'] || $enable_auto_clear_cache_users['cec_auto_cache']) {
     // Only clear URL in nodes
     $entity_type = $entity->getEntityTypeId();
 
-    if ($entity_type == 'node') {
+    if ($enable_auto_clear_cache_content['cec_auto_cache'] && $entity_type == 'node') {
       $path_url = \Drupal::service('path.alias_manager')->getAliasByPath('/node/' . $entity->id());
 
       // Test connection
@@ -29,16 +47,38 @@ function cloudfront_edge_caching_entity_update(Drupal\Core\Entity\EntityInterfac
       if ($test_connection_cec == TRUE) {
         // Invalidate URL
         list($status, $message) = cloudfront_edge_caching_invalidate_url(array($path_url));
-        if ($status != TRUE) {
-          drupal_set_message(t($message), 'error');
-        }
+      }
+    }
+    elseif ($enable_auto_clear_cache_users['cec_auto_cache'] && $entity_type == 'user') {
+      $path_url = \Drupal::service('path.alias_manager')->getAliasByPath('/user/' . $entity->id());
+
+      // Test connection
+      $test_connection_cec = cloudfront_edge_caching_test_connection($config->get('cec_region'), $config->get('cec_key'), $config->get('cec_secret'));
+      if ($test_connection_cec == TRUE) {
+        // Invalidate URL
+        list($status, $message) = cloudfront_edge_caching_invalidate_url(array($path_url));
       }
     }
   }
 }
 
 /**
+ * Test connection with Amazon AWS
+ *
+ * Data may be stored as either plain text or as serialized data. cache_get
+ *
+ * @param string $cec_region
+ *   Regions configured in the administer form
+ *
+ * @param string $cec_key
+ *   Regions configured in the administer form
+ *
+ * @param string $cec_secret
+ *   Regions configured in the administer form
+ *
  * @return mixed
+ *   The value result.
+ *
  */
 function cloudfront_edge_caching_test_connection($cec_region, $cec_key, $cec_secret) {
 
@@ -78,6 +118,10 @@ function cloudfront_edge_caching_test_connection($cec_region, $cec_key, $cec_sec
   return $return;
 }
 
+/**
+ * @param $paths
+ * @return mixed
+ */
 function cloudfront_edge_caching_invalidate_url($paths) {
 
   //Return values

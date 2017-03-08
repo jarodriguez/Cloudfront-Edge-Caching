@@ -9,7 +9,7 @@ use Aws;
 use Aws\Exception\AwsException;
 
 /**
- * Configure settings for Cloudfront credentials
+ * Invalidate manual URL
  */
 class CecAdminInvalidateUrl extends ConfigFormBase {
 
