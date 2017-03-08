@@ -59,6 +59,7 @@ class CecAdminSettingsForm extends ConfigFormBase {
       '#size' => 10,
       '#maxlength' => 128,
       '#description' => $this->t('Ej: us-east-1'),
+      '#required' => TRUE
     ];
 
     // Key.
@@ -69,6 +70,7 @@ class CecAdminSettingsForm extends ConfigFormBase {
       '#size' => 50,
       '#maxlength' => 128,
       '#description' => $this->t('Ej: EOjWGh6Keft9czeNkmHsa1aMcrhYukxdlIXRayDt'),
+      '#required' => TRUE
     ];
 
     // Secret.
@@ -79,6 +81,7 @@ class CecAdminSettingsForm extends ConfigFormBase {
       '#size' => 20,
       '#maxlength' => 128,
       '#description' => $this->t('Ej: AHIAJF6JNSRJRVNSDOKA'),
+      '#required' => TRUE
     ];
 
     // Distribution ID.
@@ -89,6 +92,7 @@ class CecAdminSettingsForm extends ConfigFormBase {
       '#size' => 20,
       '#maxlength' => 128,
       '#description' => $this->t('Ej: E206SWIPUZ2Z48'),
+      '#required' => TRUE
     ];
 
     $form['cache'] = array(
@@ -97,18 +101,29 @@ class CecAdminSettingsForm extends ConfigFormBase {
     );
 
     // Auto clear cache for content
-    $form['cache']['cec_auto_cache_clear_content'] = [
+    // TODO: Pending to https://www.drupal.org/node/2712079
+    $cec_auto_cache_clear_content = array(
       '#type' => 'checkboxes',
-      '#options' => ['cec_auto_cache' => t('Clear cache when create/update/delete content')],
-      '#default_value' => $config->get('cec_auto_cache_clear_content'),
-    ];
+      '#options' => ['cec_auto_cache' => t('Clear cache when update content')],
+    );
+
+    if ($config->get('cec_auto_cache_clear_content')) {
+      $cec_auto_cache_clear_content['#default_value'] = $config->get('cec_auto_cache_clear_content');
+    }
+
+    $form['cache']['cec_auto_cache_clear_content'] = $cec_auto_cache_clear_content;
 
     // Auto clear cache for users
-    $form['cache']['cec_auto_cache_clear_users'] = [
+    // TODO: Pending to https://www.drupal.org/node/2712079
+    $cec_auto_cache_clear_users = array(
       '#type' => 'checkboxes',
-      '#options' => ['cec_auto_cache' => t('Clear cache when create/update/delete users')],
-      '#default_value' => $config->get('cec_auto_cache_clear_users'),
-    ];
+      '#options' => ['cec_auto_cache' => t('Clear cache when update users')],
+    );
+
+    if ($config->get('cec_auto_cache_clear_users')) {
+      $cec_auto_cache_clear_users['#default_value'] = $config->get('cec_auto_cache_clear_users');
+    }
+    $form['cache']['cec_auto_cache_clear_users'] = $cec_auto_cache_clear_users;
 
     $form['actions']['submit'] = array(
       '#type' => 'submit',

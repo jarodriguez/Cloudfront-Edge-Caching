@@ -97,23 +97,29 @@ class CecAdminInvalidateUrl extends ConfigFormBase {
     // Get the AWS Credentials
     $config = \Drupal::config('cec.settings');
 
-    // Get the Paths
-    $paths = array();
-    foreach($url_value as $value) {
-      if ($value) {
-        $paths[] = trim($value);
+    // Check if the credentials are configured
+    if (!$config->get('cec_region' && !$config->get('cec_key') && !$config->get('cec_secret'))) {
+      drupal_set_message(t('You must configure the Global Settings correctly before execute an invalidation.'), 'error');
+    }
+
+    else {
+      // Get the Paths
+      $paths = array();
+      foreach ($url_value as $value) {
+        if ($value) {
+          $paths[] = trim($value);
+        }
+      }
+
+      // Invalidate URL
+      list($status, $message) = cloudfront_edge_caching_invalidate_url($paths);
+
+      if ($status == TRUE) {
+        drupal_set_message(t('You invalidation is in progress.'), 'status');
+      }
+      else {
+        drupal_set_message(t($message), 'error');
       }
     }
-
-    // Invalidate URL
-    list($status, $message) = cloudfront_edge_caching_invalidate_url($paths);
-
-    if ($status == TRUE) {
-      drupal_set_message(t('You invalidation is in progress.'), 'status');
-    }
-    else {
-      drupal_set_message(t($message), 'error');
-    }
   }
-
 }
