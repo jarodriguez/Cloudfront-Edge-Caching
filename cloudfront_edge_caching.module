@@ -116,10 +116,21 @@ function cloudfront_edge_caching_invalidate_url($paths) {
   } catch (AwsException $e) {
     $catch = TRUE;
     $return[1] = $e->getMessage();
+
+    // Logs an error
+    \Drupal::logger('cloudfront_edge_caching')->error($e->getMessage());
   }
 
   if (empty($catch)) {
     $return[0] = TRUE;
+
+    // Logs a message
+    if ($total_paths == 1) \Drupal::logger('cloudfront_edge_caching')->notice('The URL ' . $paths[0] . ' is in progress.');
+    else {
+      foreach($paths as $value) {
+        \Drupal::logger('cloudfront_edge_caching')->notice('The URL ' . $value . ' is in progress.');
+      }
+    }
   }
 
   return $return;
